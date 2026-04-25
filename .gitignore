@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+extract/raw_*.csv
+transform/clean_*.csv
