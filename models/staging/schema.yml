@@ -1,0 +1,58 @@
+version: 2
+
+models:
+  - name: stg_orders
+    description: "Raw orders data"
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_users
+    description: "Raw users data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_products
+    description: "Raw products data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_order_items
+    description: "Raw order items data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_inventory_items
+    description: "Raw inventory items data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_events
+    description: "Raw website events data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_distribution_centers
+    description: "Raw distribution centers data"
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
