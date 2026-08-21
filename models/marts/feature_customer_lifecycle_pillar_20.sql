@@ -1,58 +1,89 @@
 {{
     config(
-        materialized='incremental',
-        unique_key='user_id'
+        materialized='table'
     )
 }}
 
 -- =================================================================================
--- 🔄 PILLAR 20: DYNAMIC LIFECYCLE & TIERED CHURN ENGINE
+-- ⏳ PILLAR 20 (PRO-VERSION): DYNAMIC LIFECYCLE & TIERED CHURN ENGINE
 -- =================================================================================
 
-WITH user_timeline AS (
-    -- Step 1: User ki pehli aur aakhiri kharidari ka din nikalna
+WITH user_order_dates AS (
     SELECT 
         user_id,
-        MAX(DATE(order_created_at)) AS last_purchase_date,
-        MIN(DATE(order_created_at)) AS first_purchase_date,
-        COUNT(order_id) AS total_orders
-    FROM {{ ref('fct_order_items') }} -- 👈 DBT Magic (Ref)
+        MIN(DATE(order_created_at)) AS first_order_date,
+        MAX(DATE(order_created_at)) AS last_order_date,
+        COUNT(DISTINCT order_id) AS total_orders,
+        -- 🔥 NAYA COLUMN: Average Order Value (AOV) nikal rahe hain aukaat/category ka andaza lagane ke liye
+        ROUND(SUM(sale_price) / COUNT(DISTINCT order_id), 2) AS avg_order_value 
+    FROM {{ ref('fct_order_items') }}
     WHERE order_status NOT IN ('Cancelled', 'Returned')
     GROUP BY user_id
 ),
 
-lifecycle_metrics AS (
-    -- Step 2: Aaj ke din se uska gap nikalna (Kitne din se gayab hai?)
+thresholds AS (
+    -- 🛠️ ARCHITECTURAL REFINEMENT: Centralized Threshold & Category Price Config
     SELECT 
-        user_id,
-        total_orders,
-        DATE_DIFF(CURRENT_DATE(), first_purchase_date, DAY) AS account_age_days,
-        DATE_DIFF(CURRENT_DATE(), last_purchase_date, DAY) AS days_since_last_purchase
-    FROM user_timeline
+        60 AS onboarding_days_max,
+        90 AS active_days_max,
+        180 AS slipping_days_max,
+        20 AS win_back_discount_pct, 
+        10 AS urgency_discount_pct,
+        150 AS high_ticket_aov_threshold -- 🔥 Naya Config: $150 se upar ki shopping (like Electronics/Jackets)
+),
+
+dataset_today AS (
+    SELECT MAX(last_order_date) AS global_max_date FROM user_order_dates
 )
 
 SELECT 
-    user_id,
-    total_orders,
-    account_age_days,
-    days_since_last_purchase,
+    u.user_id,
+    u.first_order_date,
+    u.last_order_date,
+    u.total_orders,
+    u.avg_order_value,
     
-    -- 🤖 AI Persona: Tiered Churn Status
-    CASE 
-        WHEN days_since_last_purchase <= 30 THEN 'Highly Active (0-30 Days)'
-        WHEN days_since_last_purchase BETWEEN 31 AND 60 THEN 'Slipping Away (31-60 Days)'
-        WHEN days_since_last_purchase BETWEEN 61 AND 90 THEN 'High Risk of Churn (61-90 Days)'
-        WHEN days_since_last_purchase > 90 THEN 'Officially Churned (90+ Days)'
-        ELSE 'Unknown'
-    END AS dynamic_churn_status,
+    DATE_DIFF(d.global_max_date, u.last_order_date, DAY) AS days_since_last_order,
+    DATE_DIFF(d.global_max_date, u.first_order_date, DAY) AS customer_tenure_days,
     
-    -- 🚀 Real-Time AI Retention Action
+    -- 🤖 AI Persona: The Lifecycle Segment
     CASE 
-        WHEN days_since_last_purchase <= 30 THEN 'ENGAGE: Ask for product reviews and referrals. Do not discount.'
-        WHEN days_since_last_purchase BETWEEN 31 AND 60 THEN 'GENTLE NUDGE: Send "New Arrivals" newsletter based on their past category.'
-        WHEN days_since_last_purchase BETWEEN 61 AND 90 THEN 'URGENT RE-ENGAGEMENT: Send a 10% personalized discount code expiring in 48 hours.'
-        WHEN days_since_last_purchase > 90 THEN 'WIN-BACK CAMPAIGN: Send aggressive 20%+ discount or "We miss you" freebie.'
-        ELSE 'Standard Monitoring.'
-    END AS churn_marketing_action
+        WHEN u.total_orders = 1 AND DATE_DIFF(d.global_max_date, u.first_order_date, DAY) <= t.onboarding_days_max THEN 'New User (Onboarding Phase)'
+        WHEN u.total_orders = 1 AND DATE_DIFF(d.global_max_date, u.first_order_date, DAY) > t.onboarding_days_max THEN 'One-and-Done (Needs 2nd Purchase)'
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) <= t.active_days_max THEN 'Active Loyalist'
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) BETWEEN (t.active_days_max + 1) AND t.slipping_days_max THEN 'Slipping Away (At Churn Risk)'
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) > t.slipping_days_max THEN 'Dormant/Lost Customer'
+        ELSE 'Unknown Cohort'
+    END AS lifecycle_segment,
+    
+    -- 🚀 AUKAAT-AWARE MARKETING ACTION (No more blind 20%!)
+    CASE 
+        -- Rule 1: New Users
+        WHEN u.total_orders = 1 AND DATE_DIFF(d.global_max_date, u.first_order_date, DAY) <= t.onboarding_days_max THEN 'NURTURE: Send "Welcome" series. Focus on brand trust.'
+        
+        -- Rule 2: One-and-Done
+        WHEN u.total_orders = 1 AND DATE_DIFF(d.global_max_date, u.first_order_date, DAY) > t.onboarding_days_max THEN 
+            CASE 
+                WHEN u.avg_order_value >= t.high_ticket_aov_threshold THEN 'WIN-BACK (HIGH TICKET): Do NOT give % discount. Offer Flat $50 Cashback or Free Premium Warranty to protect margins.'
+                ELSE CONCAT('WIN-BACK (STANDARD): Trigger Category-Adjusted ', t.win_back_discount_pct, '% discount on Apparel/Utility.')
+            END
+            
+        -- Rule 3: Active Loyalists
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) <= t.active_days_max THEN 'VIP ENGAGEMENT: Zero Discounts. Offer Early Access & Priority Support.'
+        
+        -- Rule 4: Slipping Away
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) BETWEEN (t.active_days_max + 1) AND t.slipping_days_max THEN 
+            CASE 
+                WHEN u.avg_order_value >= t.high_ticket_aov_threshold THEN 'URGENCY (HIGH TICKET): Send "Free Accessories Set" on next premium order.'
+                ELSE CONCAT('URGENCY (STANDARD): Send "We miss you! ', t.urgency_discount_pct, '% off apparel/footwear."')
+            END
+            
+        -- Rule 5: Dormant
+        WHEN u.total_orders > 1 AND DATE_DIFF(d.global_max_date, u.last_order_date, DAY) > t.slipping_days_max THEN 'REACTIVATION: Hail Mary campaign. Massive BOGO / Inventory clearance offers.'
+        
+        ELSE 'Apply standard lifecycle campaign.'
+    END AS lifecycle_marketing_action
 
-FROM lifecycle_metrics
+FROM user_order_dates u
+CROSS JOIN dataset_today d
+CROSS JOIN thresholds t
