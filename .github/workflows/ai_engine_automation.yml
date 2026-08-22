@@ -1,0 +1,38 @@
+name: Execute AI Omnichannel Engine
+
+on:
+  schedule:
+    # Triggers daily at 20:30 UTC (02:00 AM IST), 30 minutes after dbt pipeline
+    - cron: '30 20 * * *'
+  workflow_dispatch: 
+
+jobs:
+  run-ai-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Configure Python 3.12 Runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # GenAI (Gemini) aur baaki sab libraries yahan hain
+        pip install jupyter papermill google-cloud-bigquery pandas scikit-learn xgboost db-dtypes google-generativeai
+
+    - name: Authenticate Google Cloud Platform (GCP)
+      run: |
+        echo "$GCP_CREDENTIALS" > gcp_key.json
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Execute Core AI Model (Headless Mode)
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: "gcp_key.json"
+      run: |
+        papermill ai_omnichannel_engine.ipynb execution_logs.ipynb
