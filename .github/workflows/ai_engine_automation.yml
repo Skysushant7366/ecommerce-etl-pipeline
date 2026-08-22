@@ -2,7 +2,6 @@ name: Execute AI Omnichannel Engine
 
 on:
   schedule:
-    # Triggers daily at 20:30 UTC (02:00 AM IST)
     - cron: '30 20 * * *'
   workflow_dispatch: 
 
@@ -19,17 +18,21 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install Python Dependencies
+    - name: Install Base Python Tools
       run: |
         python -m pip install --upgrade pip
-        
-        # Step 1: Base Data & ML Libraries
-        pip install jupyter papermill pandas scikit-learn xgboost
-        
-        # Step 2: BigQuery & Database drivers (Alag se)
+        pip install jupyter papermill
+
+    - name: Install Data & ML Stack
+      run: |
+        pip install pandas scikit-learn xgboost matplotlib seaborn
+
+    - name: Install Google Cloud & Database Tools
+      run: |
         pip install google-cloud-bigquery db-dtypes
-        
-        # Step 3: GenAI (Sabse aakhiri mein taaki conflict na ho)
+
+    - name: Install GenAI Stack
+      run: |
         pip install google-generativeai
 
     - name: Authenticate Google Cloud Platform (GCP)
@@ -41,5 +44,7 @@ jobs:
     - name: Execute Core AI Model (Headless Mode)
       env:
         GOOGLE_APPLICATION_CREDENTIALS: "gcp_key.json"
+        # Optional, par safe side ke liye Gemini API Key bhi pass kar rahe hain agar notebook mein zarurat pade
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} 
       run: |
         papermill ai_omnichannel_engine.ipynb execution_logs.ipynb
