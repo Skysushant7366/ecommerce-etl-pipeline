@@ -33,7 +33,7 @@ jobs:
 
     - name: Install GenAI Stack
       run: |
-        pip install google-generativeai
+        pip install google-genai
 
     - name: Authenticate Google Cloud Platform (GCP)
       run: |
