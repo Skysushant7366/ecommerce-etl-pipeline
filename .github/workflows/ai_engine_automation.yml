@@ -1,0 +1,55 @@
+name: Execute AI Omnichannel Engine
+
+on:
+  schedule:
+    - cron: '30 20 * * *'
+  workflow_dispatch: 
+
+jobs:
+  run-ai-pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Configure Python 3.12 Runtime
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install Base Python Tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install jupyter papermill
+
+    - name: Install Data & ML Stack
+      run: |
+        pip install pandas scikit-learn xgboost matplotlib seaborn
+
+    - name: Install Google Cloud & Database Tools
+      run: |
+        pip install google-cloud-bigquery db-dtypes gspread
+
+    - name: Install GenAI Stack
+      run: |
+        pip install google-genai
+
+    - name: Authenticate Google Cloud Platform (GCP)
+      run: |
+        echo "$GCP_CREDENTIALS" > gcp_key.json
+      env:
+        GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Execute Core AI Model (Headless Mode)
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: "gcp_key.json"
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} 
+        # 👇 YAHAN SE NAYE SECRETS JUD GAYE HAIN 👇
+        POWER_AUTOMATE_WEBHOOK_URL: ${{ secrets.POWER_AUTOMATE_WEBHOOK_URL }}
+        MY_TEST_EMAIL_1: ${{ secrets.MY_TEST_EMAIL_1 }}
+        MY_TEST_EMAIL_2: ${{ secrets.MY_TEST_EMAIL_2 }}
+        MY_TEST_EMAIL_3: ${{ secrets.MY_TEST_EMAIL_3 }}
+        MANAGER_WEBHOOK_URL: ${{ secrets.MANAGER_WEBHOOK_URL }}
+      run: |
+        papermill ai_omnichannel_engine.ipynb execution_logs.ipynb
