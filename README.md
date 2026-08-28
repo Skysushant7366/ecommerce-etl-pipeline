@@ -28,14 +28,14 @@ No human touches the pipeline between the data landing and the dashboard being r
 
 ## 🏗️ Architecture
 
-![Architecture Diagram](docs/architecture.png)
+![Architecture Diagram](Docs/Full_architecture.png)
 
 > 🔍 **[Open the full interactive diagram](https://app.diagrams.net/#Uhttps://raw.githubusercontent.com/Skysushant7366/ecommerce-etl-pipeline/main/docs/architecture.drawio)** — every box is collapsible, click `[-]` to expand any layer (dbt models, the 8-link AI chain, the 5-phase engine, etc.)
 
 <details>
 <summary><strong>📊 Click to view the full detailed architecture</strong></summary>
 
-![Detailed Architecture](docs/architecture_detailed.png)
+![Detailed Architecture](Docs/Full_architecture_detailed.png)
 
 </details>
 
