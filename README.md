@@ -28,14 +28,14 @@ No human touches the pipeline between the data landing and the dashboard being r
 
 ## 🏗️ Architecture
 
-![Architecture Diagram](Docs/Full_architecture.png)
+![Architecture Diagram](docs/architecture.png)
 
-> 🔍 **[Open the full interactive diagram](https://app.diagrams.net/#Uhttps://raw.githubusercontent.com/Skysushant7366/ecommerce-etl-pipeline/main/docs/architecture.drawio)** — every box is collapsible, click `[-]` to expand any layer (dbt models, the 8-link AI chain, the 5-phase engine, etc.)
+> 🔍 **[Open the diagram in draw.io](https://app.diagrams.net/#Uhttps://raw.githubusercontent.com/Skysushant7366/ecommerce-etl-pipeline/main/docs/architecture.drawio)** — pan and zoom through every layer (dbt models, the 8-link AI chain, the 5-phase engine, etc.)
 
 <details>
-<summary><strong>📊 Click to view the full detailed architecture</strong></summary>
+<summary><strong>📊 Click to view the full-resolution diagram (SVG)</strong></summary>
 
-![Detailed Architecture](Docs/Full_architecture_detailed.png)
+![Architecture Diagram (SVG)](docs/architecture.svg)
 
 </details>
 
@@ -193,8 +193,9 @@ ecommerce-etl-pipeline/
 ├── .github/workflows/
 │   └── ai_engine_automation.yml  # CI/CD schedule
 ├── docs/
-│   ├── architecture.drawio       # editable, collapsible architecture diagram
-│   ├── architecture.png
+│   ├── architecture.drawio       # editable draw.io source file
+│   ├── architecture.png          # architecture diagram (PNG)
+│   ├── architecture.svg          # architecture diagram (high-res SVG)
 │   ├── sql_pipeline_tree.svg     # full 45-model dependency graph
 │   └── dashboard_preview.png
 ├── dbt_project.yml
