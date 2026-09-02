@@ -215,9 +215,9 @@ ecommerce-etl-pipeline/
 
 ## 👤 Author
 
-**Sushant Yadav**
+**Sushant Kumar Yadav**
 B.Com (Hons), University of Delhi — Aspiring Data / Business Analyst
-📫 Open to Data Analyst / Business Analyst roles
+📫 Open to Data Analyst / Business Analyst / Analytics Engineer roles
 
 ---
 
